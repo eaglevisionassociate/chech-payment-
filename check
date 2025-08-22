@@ -1,0 +1,588 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Header } from '@/components/Header';
+import { MobileOptimized } from '@/components/MobileOptimized';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Trash2, Plus, Edit, Save, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { GoogleSheetsService } from '@/services/googleSheets';
+import { Attendant } from '@/types';
+
+interface User extends Attendant {
+  id: string;
+  accessLevel: number;
+}
+
+const Admin = () => {
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [registrations, setRegistrations] = useState<string[]>([]);
+  const [tankLevel, setTankLevel] = useState<number>(0);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [newUser, setNewUser] = useState({ name: '', pin: '', accessLevel: 2 });
+  const [newRegistration, setNewRegistration] = useState('');
+  const [newTankLevel, setNewTankLevel] = useState('');
+  const [googleSheetsService, setGoogleSheetsService] = useState<GoogleSheetsService | null>(null);
+  const [loading, setLoading] = useState({
+    users: false,
+    registrations: false,
+    tank: false,
+    saving: false
+  });
+
+  // Initialize service
+  useEffect(() => {
+    setGoogleSheetsService(new GoogleSheetsService({
+      scriptURL: 'https://script.google.com/macros/s/AKfycbyCNwF95_m2fCzKi2ZTb04yZSzdBv9X_42ugsaGqP8qAFjX6uA_jydUaY_iYj9xZmlV/exec',
+      spreadsheetID: '1HXuISyOdPLfnpM5rM6YatQFcifBA5nKB-qm5jC3bz2A'
+    }));
+  }, []);
+
+  // Check authentication and load data
+  useEffect(() => {
+    const stored = localStorage.getItem('currentUser');
+    if (stored) {
+      const user = JSON.parse(stored);
+      setCurrentUser(user);
+      
+      if (user.accessLevel !== 1 && user.accessLevel !== 2 && user.accessLevel !== 3) {
+        toast.error('Access denied. User privileges required.');
+        navigate('/');
+        return;
+      }
+      loadData();
+    } else {
+      toast.error('Please login first');
+      navigate('/');
+    }
+  }, [navigate]);
+
+  const loadData = async () => {
+    if (!googleSheetsService) return;
+
+    try {
+      setLoading(prev => ({ ...prev, users: true, registrations: true, tank: true }));
+      
+      const [usersData, regsData, tankData] = await Promise.all([
+        googleSheetsService.getUsers(),
+        googleSheetsService.loadRegistrations(),
+        googleSheetsService.getTankLevel()
+      ]);
+      
+      setUsers(usersData);
+      setRegistrations(regsData);
+      setTankLevel(tankData);
+    } catch (error) {
+      toast.error('Failed to load data');
+      console.error(error);
+    } finally {
+      setLoading(prev => ({ ...prev, users: false, registrations: false, tank: false }));
+    }
+  };
+
+  const handleAddUser = async () => {
+    if (!newUser.name || !newUser.pin) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    if (currentUser?.accessLevel === 1 && newUser.accessLevel === 3) {
+      toast.error('Admin users cannot create superuser accounts');
+      return;
+    }
+
+    const user: User = {
+      id: `${newUser.name}-${newUser.pin}`,
+      name: newUser.name,
+      pin: newUser.pin,
+      isAdmin: newUser.accessLevel === 1 || newUser.accessLevel === 3,
+      accessLevel: newUser.accessLevel
+    };
+
+    setLoading(prev => ({ ...prev, saving: true }));
+    try {
+      if (!googleSheetsService) throw new Error('Service not initialized');
+      const success = await googleSheetsService.addUser(user);
+      
+      if (success) {
+        setUsers(prev => [...prev, user]);
+        setNewUser({ name: '', pin: '', accessLevel: 2 });
+        toast.success('User added successfully');
+      } else {
+        throw new Error('Failed to add user to Google Sheets');
+      }
+    } catch (error) {
+      toast.error('Failed to add user');
+      console.error(error);
+    } finally {
+      setLoading(prev => ({ ...prev, saving: false }));
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    if (user.accessLevel === 3 && currentUser?.accessLevel !== 3) {
+      toast.error('Only superusers can delete superuser accounts');
+      return;
+    }
+
+    setLoading(prev => ({ ...prev, saving: true }));
+    try {
+      if (!googleSheetsService) throw new Error('Service not initialized');
+      const success = await googleSheetsService.deleteUser(userId);
+      
+      if (success) {
+        setUsers(prev => prev.filter(u => u.id !== userId));
+        toast.success('User deleted successfully');
+      } else {
+        throw new Error('Failed to delete user from Google Sheets');
+      }
+    } catch (error) {
+      toast.error('Failed to delete user');
+      console.error(error);
+    } finally {
+      setLoading(prev => ({ ...prev, saving: false }));
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    if (user.accessLevel === 3 && currentUser?.accessLevel !== 3) {
+      toast.error('Only superusers can edit superuser accounts');
+      return;
+    }
+    setEditingUser({ ...user });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingUser || !googleSheetsService) return;
+
+    setLoading(prev => ({ ...prev, saving: true }));
+    try {
+      const success = await googleSheetsService.updateUser({
+        ...editingUser,
+        isAdmin: editingUser.accessLevel === 1 || editingUser.accessLevel === 3
+      });
+      
+      if (success) {
+        setUsers(prev => prev.map(user => 
+          user.id === editingUser.id ? editingUser : user
+        ));
+        setEditingUser(null);
+        toast.success('User updated successfully');
+      } else {
+        throw new Error('Failed to update user in Google Sheets');
+      }
+    } catch (error) {
+      toast.error('Failed to update user');
+      console.error(error);
+    } finally {
+      setLoading(prev => ({ ...prev, saving: false }));
+    }
+  };
+
+  const handleAddRegistration = async () => {
+    if (!newRegistration.trim()) {
+      toast.error('Please enter a registration number');
+      return;
+    }
+
+    setLoading(prev => ({ ...prev, saving: true }));
+    try {
+      if (!googleSheetsService) throw new Error('Service not initialized');
+      const success = await googleSheetsService.addRegistration(newRegistration.trim());
+      
+      if (success) {
+        setRegistrations(prev => [...prev, newRegistration.trim()]);
+        setNewRegistration('');
+        toast.success('Registration added successfully');
+      } else {
+        throw new Error('Failed to add registration to Google Sheets');
+      }
+    } catch (error) {
+      toast.error('Failed to add registration');
+      console.error(error);
+    } finally {
+      setLoading(prev => ({ ...prev, saving: false }));
+    }
+  };
+
+  const handleDeleteRegistration = async (index: number) => {
+    setLoading(prev => ({ ...prev, saving: true }));
+    try {
+      if (!googleSheetsService) throw new Error('Service not initialized');
+      const success = await googleSheetsService.deleteRegistration(index);
+      
+      if (success) {
+        setRegistrations(prev => prev.filter((_, i) => i !== index));
+        toast.success('Registration deleted successfully');
+      } else {
+        throw new Error('Failed to delete registration from Google Sheets');
+      }
+    } catch (error) {
+      toast.error('Failed to delete registration');
+      console.error(error);
+    } finally {
+      setLoading(prev => ({ ...prev, saving: false }));
+    }
+  };
+
+  const handleUpdateTankLevel = async () => {
+    const level = parseFloat(newTankLevel);
+    if (isNaN(level) || level < 0) {
+      toast.error('Please enter a valid tank level');
+      return;
+    }
+
+    setLoading(prev => ({ ...prev, saving: true }));
+    try {
+      if (!googleSheetsService) throw new Error('Service not initialized');
+      const success = await googleSheetsService.updateTankLevel(level);
+      
+      if (success) {
+        setTankLevel(level);
+        setNewTankLevel('');
+        toast.success('Tank level updated successfully');
+      } else {
+        throw new Error('Failed to update tank level in Google Sheets');
+      }
+    } catch (error) {
+      toast.error('Failed to update tank level');
+      console.error(error);
+    } finally {
+      setLoading(prev => ({ ...prev, saving: false }));
+    }
+  };
+
+  const getAccessLevelText = (level: number) => {
+    switch (level) {
+      case 1: return 'Admin';
+      case 2: return 'Normal User';
+      case 3: return 'Superuser';
+      default: return 'Unknown';
+    }
+  };
+
+  const getAccessLevelColor = (level: number) => {
+    switch (level) {
+      case 1: return 'text-blue-600';
+      case 2: return 'text-green-600';
+      case 3: return 'text-purple-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  if (!currentUser) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <MobileOptimized>
+      <Header />
+      <div className="container mx-auto p-4 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Admin Panel</h1>
+            <p className="text-muted-foreground">
+              Logged in as: {currentUser.name} ({getAccessLevelText(currentUser.accessLevel)})
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => navigate('/')}>
+            Back to Dashboard
+          </Button>
+        </div>
+
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="registrations">Registrations</TabsTrigger>
+            <TabsTrigger value="tank">Tank Level</TabsTrigger>
+            <TabsTrigger value="api" disabled={currentUser?.accessLevel === 2}>
+              API Settings
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="users" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>
+                  Add, edit, or remove users and manage access levels
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
+                  <div>
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      id="name"
+                      value={newUser.name}
+                      onChange={(e) => setNewUser(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Enter name"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="pin">PIN</Label>
+                    <Input
+                      id="pin"
+                      value={newUser.pin}
+                      onChange={(e) => setNewUser(prev => ({ ...prev, pin: e.target.value }))}
+                      placeholder="Enter PIN"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="access">Access Level</Label>
+                    <Select
+                      value={newUser.accessLevel.toString()}
+                      onValueChange={(value) => setNewUser(prev => ({ ...prev, accessLevel: parseInt(value) }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Admin (1)</SelectItem>
+                        <SelectItem value="2">Normal User (2)</SelectItem>
+                        {currentUser.accessLevel === 3 && (
+                          <SelectItem value="3">Superuser (3)</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end">
+                    <Button onClick={handleAddUser} className="w-full" disabled={loading.saving}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      {loading.saving ? 'Adding...' : 'Add User'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {loading.users ? (
+                    <div className="flex justify-center p-4">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                    </div>
+                  ) : (
+                    users.map((user) => (
+                      <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        {editingUser && editingUser.id === user.id ? (
+                          <div className="flex items-center gap-4 flex-1">
+                            <Input
+                              value={editingUser.name}
+                              onChange={(e) => setEditingUser(prev => prev ? { ...prev, name: e.target.value } : null)}
+                              className="w-32"
+                            />
+                            <Input
+                              value={editingUser.pin}
+                              onChange={(e) => setEditingUser(prev => prev ? { ...prev, pin: e.target.value } : null)}
+                              className="w-24"
+                            />
+                            <Select
+                              value={editingUser.accessLevel.toString()}
+                              onValueChange={(value) => setEditingUser(prev => prev ? { 
+                                ...prev, 
+                                accessLevel: parseInt(value),
+                                isAdmin: parseInt(value) === 1
+                              } : null)}
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {currentUser.accessLevel >= 2 && <SelectItem value="1">Admin (1)</SelectItem>}
+                                <SelectItem value="2">Normal (2)</SelectItem>
+                                {currentUser.accessLevel === 3 && (
+                                  <SelectItem value="3">Super (3)</SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={handleSaveEdit} disabled={loading.saving}>
+                                <Save className="w-4 h-4" />
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => setEditingUser(null)}>
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-4">
+                              <span className="font-medium">{user.name}</span>
+                              <span className="text-sm text-muted-foreground">PIN: {user.pin}</span>
+                              <span className={`text-sm font-medium ${getAccessLevelColor(user.accessLevel)}`}>
+                                {getAccessLevelText(user.accessLevel)}
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleEditUser(user)}
+                                disabled={user.accessLevel === 3 && currentUser.accessLevel !== 3}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => handleDeleteUser(user.id)}
+                                disabled={user.accessLevel === 3 && currentUser.accessLevel !== 3}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="registrations" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Registration Management</CardTitle>
+                <CardDescription>
+                  Add or remove vehicle registration numbers
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-4">
+                  <Input
+                    value={newRegistration}
+                    onChange={(e) => setNewRegistration(e.target.value)}
+                    placeholder="Enter registration number"
+                    className="flex-1"
+                  />
+                  <Button onClick={handleAddRegistration} disabled={loading.saving}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    {loading.saving ? 'Adding...' : 'Add Registration'}
+                  </Button>
+                </div>
+
+                {loading.registrations ? (
+                  <div className="flex justify-center p-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {registrations.map((registration, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                        <span className="font-medium">{registration}</span>
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          onClick={() => handleDeleteRegistration(index)}
+                          disabled={loading.saving}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tank" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tank Level Management</CardTitle>
+                <CardDescription>
+                  Monitor and update the current tank level
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center p-6 border rounded-lg">
+                  <h3 className="text-2xl font-bold mb-2">Current Tank Level</h3>
+                  <p className="text-4xl font-bold text-primary">
+                    {loading.tank ? 'Loading...' : `${tankLevel} L`}
+                  </p>
+                </div>
+
+                <div className="flex gap-4">
+                  <Input
+                    type="number"
+                    value={newTankLevel}
+                    onChange={(e) => setNewTankLevel(e.target.value)}
+                    placeholder="Enter new tank level (L)"
+                    className="flex-1"
+                  />
+                  <Button onClick={handleUpdateTankLevel} disabled={loading.saving}>
+                    {loading.saving ? 'Updating...' : 'Update Level'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="api" className="space-y-4">
+            {currentUser?.accessLevel === 3 ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>API Configuration</CardTitle>
+                  <CardDescription>
+                    Configure Google Sheets and ThingSpeak API settings (Superuser only)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="googleScriptURL">Google Script URL</Label>
+                    <Input
+                      id="googleScriptURL"
+                      value="https://script.google.com/macros/s/AKfycbyCNwF95_m2fCzKi2ZTb04yZSzdBv9X_42ugsaGqP8qAFjX6uA_jydUaY_iYj9xZmlV/exec"
+                      readOnly
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="spreadsheetID">Spreadsheet ID</Label>
+                    <Input
+                      id="spreadsheetID"
+                      value="1HXuISyOdPLfnpM5rM6YatQFcifBA5nKB-qm5jC3bz2A"
+                      readOnly
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="thingSpeakKey">ThingSpeak API Key</Label>
+                    <Input
+                      id="thingSpeakKey"
+                      placeholder="Your ThingSpeak API Key"
+                      className="mt-1"
+                    />
+                  </div>
+                  <Button disabled>
+                    Save API Configuration
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <h3 className="text-lg font-medium text-muted-foreground">Access Restricted</h3>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Only superusers (Level 3) can access API settings
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+    </MobileOptimized>
+  );
+};
+
+export default Admin;
