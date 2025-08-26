@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Approval Dashboard</title>
+    <title>Student Progress Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -148,6 +148,20 @@
             background-color: #f9f9f9;
         }
         
+        .progress-bar {
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #28a745;
+            border-radius: 5px;
+        }
+        
         .status {
             display: inline-block;
             padding: 5px 10px;
@@ -156,24 +170,14 @@
             font-weight: 500;
         }
         
-        .status.pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
-        .status.approved {
+        .status.active {
             background: #d4edda;
             color: #155724;
         }
         
-        .status.rejected {
+        .status.inactive {
             background: #f8d7da;
             color: #721c24;
-        }
-        
-        .status.paused {
-            background: #e2e3e5;
-            color: #383d41;
         }
         
         .actions {
@@ -188,33 +192,6 @@
             cursor: pointer;
             font-weight: 500;
             transition: all 0.2s;
-        }
-        
-        .btn-approve {
-            background: #28a745;
-            color: white;
-        }
-        
-        .btn-approve:hover {
-            background: #218838;
-        }
-        
-        .btn-reject {
-            background: #dc3545;
-            color: white;
-        }
-        
-        .btn-reject:hover {
-            background: #c82333;
-        }
-        
-        .btn-pause {
-            background: #6c757d;
-            color: white;
-        }
-        
-        .btn-pause:hover {
-            background: #5a6268;
         }
         
         .btn-view {
@@ -284,7 +261,9 @@
             padding: 30px;
             border-radius: 10px;
             width: 90%;
-            max-width: 500px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
         
@@ -318,37 +297,28 @@
             font-size: 16px;
         }
         
-        .btn-primary {
-            background: #6574cd;
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            width: 100%;
-        }
-        
-        .btn-primary:hover {
-            background: #5563c1;
-        }
-        
-        .config-panel {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-        
-        .config-form {
+        .progress-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
         }
         
-        .config-form .form-group {
-            margin-bottom: 0;
+        .progress-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .progress-card h4 {
+            margin-bottom: 10px;
+            color: #3a7bd5;
+        }
+        
+        .time-spent {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
         }
         
         @media (max-width: 768px) {
@@ -378,7 +348,7 @@
                 min-width: 700px;
             }
             
-            .config-form {
+            .progress-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -388,65 +358,46 @@
     <div class="container">
         <header>
             <div class="header-content">
-                <h1><i class="fas fa-user-check"></i> User Approval Dashboard</h1>
+                <h1><i class="fas fa-user-graduate"></i> Student Progress Dashboard</h1>
                 <div class="user-info">
-                    <p>Welcome, Admin</p>
+                    <p>Welcome, Educator</p>
                 </div>
             </div>
             
             <div class="stats">
                 <div class="stat-card">
-                    <p>Pending Approval</p>
-                    <div class="stat-number" id="pendingCount">0</div>
-                </div>
-                <div class="stat-card">
-                    <p>Approved Users</p>
-                    <div class="stat-number" id="approvedCount">0</div>
-                </div>
-                <div class="stat-card">
-                    <p>Total Users</p>
+                    <p>Total Students</p>
                     <div class="stat-number" id="totalCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <p>Active Students</p>
+                    <div class="stat-number" id="activeCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <p>Avg. Progress</p>
+                    <div class="stat-number" id="avgProgress">0%</div>
                 </div>
             </div>
         </header>
         
-        <div class="config-panel">
-            <h2>Supabase Configuration</h2>
-            <div class="error" id="errorMessage"></div>
-            <div class="success" id="successMessage"></div>
-            <div class="config-form">
-                <div class="form-group">
-                    <label for="supabaseUrl">Supabase URL</label>
-                    <input type="text" id="supabaseUrl" value="https://yejsacotkqcatdfrqksn.supabase.co">
-                </div>
-                <div class="form-group">
-                    <label for="supabaseKey">Supabase API Key</label>
-                    <input type="text" id="supabaseKey" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InllanNhY290a3FjYXRkZnJxa3NuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzU1ODEyNSwiZXhwIjoyMDY5MTM0MTI1fQ.opddb8PuNnfk7xtLTYs4uZ1V8ta0OuTc3oX7-zZhfcw">
-                </div>
-                <div class="form-group">
-                    <button class="btn-primary" id="connectBtn">Connect to Supabase</button>
-                </div>
-            </div>
-        </div>
+        <div class="error" id="errorMessage"></div>
+        <div class="success" id="successMessage"></div>
         
         <div class="controls">
             <div class="search-box">
                 <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Search users...">
+                <input type="text" id="searchInput" placeholder="Search students...">
             </div>
             
             <div class="filters">
                 <div class="filter-btn active" data-filter="all">
                     <i class="fas fa-users"></i> All
                 </div>
-                <div class="filter-btn" data-filter="pending">
-                    <i class="fas fa-clock"></i> Pending
+                <div class="filter-btn" data-filter="active">
+                    <i class="fas fa-user-check"></i> Active
                 </div>
-                <div class="filter-btn" data-filter="approved">
-                    <i class="fas fa-check-circle"></i> Approved
-                </div>
-                <div class="filter-btn" data-filter="rejected">
-                    <i class="fas fa-times-circle"></i> Rejected
+                <div class="filter-btn" data-filter="inactive">
+                    <i class="fas fa-user-clock"></i> Inactive
                 </div>
             </div>
         </div>
@@ -454,51 +405,53 @@
         <div class="user-table">
             <div class="loading" id="loadingIndicator">
                 <div class="spinner"></div>
-                <p>Loading users...</p>
+                <p>Loading student data...</p>
             </div>
             
-            <table style="display: none;" id="usersTable">
+            <table style="display: none;" id="studentsTable">
                 <thead>
                     <tr>
-                        <th>User</th>
-                        <th>Email</th>
-                        <th>Signup Date</th>
-                        <th>Last Sign In</th>
+                        <th>Student</th>
+                        <th>Grade</th>
+                        <th>Progress</th>
+                        <th>Last Activity</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody id="usersTableBody">
-                    <!-- Users will be populated here -->
+                <tbody id="studentsTableBody">
+                    <!-- Students will be populated here -->
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- User Detail Modal -->
-    <div class="modal" id="userModal">
+    <!-- Student Detail Modal -->
+    <div class="modal" id="studentModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>User Details</h2>
+                <h2>Student Progress Details</h2>
                 <span class="close" id="closeModal">&times;</span>
             </div>
             <div id="modalBody">
-                <!-- User details will be populated here -->
+                <!-- Student details will be populated here -->
             </div>
         </div>
     </div>
 
     <script>
-        // Supabase client
-        let supabase = null;
+        // Supabase initialization
+        const supabaseUrl = 'https://yejsacotkqcatdfrqksn.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InllanNhY290a3FjYXRkZnJxa3NuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzU1ODEyNSwiZXhwIjoyMDY5MTM0MTI1fQ.opddb8PuNnfk7xtLTYs4uZ1V8ta0OuTc3oX7-zZhfcw';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
         
         document.addEventListener('DOMContentLoaded', function() {
-            // Connect to Supabase button
-            const connectBtn = document.getElementById('connectBtn');
-            connectBtn.addEventListener('click', connectToSupabase);
+            // Load students on page load
+            loadStudents();
             
             // Set up event listeners
-            document.getElementById('searchInput').addEventListener('input', filterUsers);
+            document.getElementById('searchInput').addEventListener('input', filterStudents);
             
             const filterButtons = document.querySelectorAll('.filter-btn');
             filterButtons.forEach(button => {
@@ -506,180 +459,189 @@
                     filterButtons.forEach(btn => btn.classList.remove('active'));
                     button.classList.add('active');
                     const filter = button.getAttribute('data-filter');
-                    filterUsers(filter);
+                    filterStudents(filter);
                 });
             });
             
             document.getElementById('closeModal').addEventListener('click', () => {
-                document.getElementById('userModal').style.display = 'none';
+                document.getElementById('studentModal').style.display = 'none';
             });
-            
-            // Auto-connect if credentials are already filled
-            if (document.getElementById('supabaseUrl').value && document.getElementById('supabaseKey').value) {
-                connectToSupabase();
-            }
         });
         
-        async function connectToSupabase() {
-            const supabaseUrl = document.getElementById('supabaseUrl').value;
-            const supabaseKey = document.getElementById('supabaseKey').value;
-            const errorDiv = document.getElementById('errorMessage');
-            const successDiv = document.getElementById('successMessage');
-            
-            if (!supabaseUrl || !supabaseKey) {
-                showError('Please provide both Supabase URL and API Key');
-                return;
-            }
-            
+        async function loadStudents() {
             try {
-                errorDiv.style.display = 'none';
                 document.getElementById('loadingIndicator').style.display = 'flex';
                 
-                // Initialize Supabase
-                supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-                
-                // Test the connection by trying to get the session
-                const { data, error } = await supabase.auth.getSession();
+                // Fetch profiles with user data
+                const { data: profiles, error } = await supabase
+                    .from('profiles')
+                    .select(`
+                        *,
+                        auth_users:user_id (
+                            email,
+                            last_sign_in_at
+                        )
+                    `)
+                    .order('created_at', { ascending: false });
                 
                 if (error) {
                     throw error;
                 }
                 
-                // If connection successful, load users
-                showSuccess('Connected to Supabase successfully!');
-                loadUsers();
+                // Fetch progress data for all users
+                const { data: progressData, error: progressError } = await supabase
+                    .from('user_progress')
+                    .select('*');
+                
+                if (progressError) {
+                    throw progressError;
+                }
+                
+                // Fetch submissions to calculate time spent
+                const { data: submissions, error: submissionsError } = await supabase
+                    .from('submissions')
+                    .select('*');
+                
+                if (submissionsError) {
+                    throw submissionsError;
+                }
+                
+                // Display students with their progress data
+                displayStudents(profiles, progressData, submissions);
                 
             } catch (error) {
-                showError(`Connection error: ${error.message}`);
+                showError(`Error loading student data: ${error.message}`);
                 document.getElementById('loadingIndicator').style.display = 'none';
             }
         }
         
-        async function loadUsers() {
-            if (!supabase) {
-                showError('Not connected to Supabase. Please check your connection.');
-                return;
-            }
-            
-            try {
-                // Fetch users from Supabase Auth using the admin API
-                // Note: This requires the service_role key, not the anon key
-                // For security reasons, this should be done through a server-side function
-                // For demo purposes, we're using the admin API directly
-                
-                // First, let's try to get the current session to verify our key has permissions
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                
-                if (sessionError) {
-                    throw new Error(`Authentication error: ${sessionError.message}. Please check your API key permissions.`);
-                }
-                
-                // If we have a valid session, try to fetch users
-                // Note: This might require a service role key to access all users
-                const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers();
-                
-                if (usersError) {
-                    throw new Error(`Failed to fetch users: ${usersError.message}. Your API key may not have sufficient permissions.`);
-                }
-                
-                // Display users
-                displayUsers(users);
-                
-            } catch (error) {
-                showError(error.message);
-                document.getElementById('loadingIndicator').style.display = 'none';
-            }
-        }
-        
-        function displayUsers(users) {
-            const tableBody = document.getElementById('usersTableBody');
+        function displayStudents(profiles, progressData, submissions) {
+            const tableBody = document.getElementById('studentsTableBody');
             const loadingIndicator = document.getElementById('loadingIndicator');
-            const usersTable = document.getElementById('usersTable');
+            const studentsTable = document.getElementById('studentsTable');
             
             // Clear previous data
             tableBody.innerHTML = '';
             
-            if (!users || users.length === 0) {
+            if (profiles.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
                         <td colspan="6" style="text-align: center; padding: 30px;">
                             <i class="fas fa-users" style="font-size: 48px; color: #ddd; margin-bottom: 15px;"></i>
-                            <p>No users found</p>
-                            <p class="help">If you expected to see users, check your API key permissions.</p>
+                            <p>No students found</p>
                         </td>
                     </tr>
                 `;
             } else {
-                // Add users to table
-                users.forEach(user => {
+                let totalProgress = 0;
+                let activeStudents = 0;
+                
+                // Add students to table
+                profiles.forEach(profile => {
+                    const userProgress = progressData.filter(p => p.user_id === profile.user_id);
+                    const userSubmissions = submissions.filter(s => s.user_id === profile.user_id);
+                    
+                    // Calculate overall progress
+                    const progressPercentage = calculateProgress(userProgress);
+                    totalProgress += progressPercentage;
+                    
+                    // Determine if student is active (submission in last 7 days)
+                    const lastSubmission = getLastSubmission(userSubmissions);
+                    const isActive = isStudentActive(lastSubmission);
+                    
+                    if (isActive) activeStudents++;
+                    
+                    const lastActivity = lastSubmission ? 
+                        formatDate(lastSubmission.created_at) : 'No activity';
+                    
+                    const signupDate = formatDate(profile.created_at);
+                    const lastLogin = profile.auth_users?.last_sign_in_at ? 
+                        formatDate(profile.auth_users.last_sign_in_at) : 'Never';
+                    
                     const tr = document.createElement('tr');
                     
-                    // Get user metadata
-                    const userMetadata = user.user_metadata || {};
-                    const userName = userMetadata.full_name || userMetadata.name || user.email || 'Unknown';
-                    const signupDate = new Date(user.created_at).toLocaleDateString();
-                    const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : 'Never';
-                    
-                    // Check if user has custom app_metadata for approval status
-                    const appMetadata = user.app_metadata || {};
-                    const approvalStatus = appMetadata.approval_status || 'pending';
-                    
                     tr.innerHTML = `
-                        <td>${userName}</td>
-                        <td>${user.email}</td>
-                        <td>${signupDate}</td>
-                        <td>${lastSignIn}</td>
-                        <td><span class="status ${approvalStatus}">${approvalStatus.charAt(0).toUpperCase() + approvalStatus.slice(1)}</span></td>
+                        <td>
+                            <div><strong>${profile.display_name || 'Unknown'}</strong></div>
+                            <div style="font-size: 12px; color: #6c757d;">${profile.auth_users?.email || 'No email'}</div>
+                        </td>
+                        <td>Grade ${profile.grade || 'N/A'}</td>
+                        <td>
+                            <div>${progressPercentage}%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${progressPercentage}%"></div>
+                            </div>
+                        </td>
+                        <td>${lastActivity}</td>
+                        <td><span class="status ${isActive ? 'active' : 'inactive'}">${isActive ? 'Active' : 'Inactive'}</span></td>
                         <td class="actions">
-                            <button class="btn btn-approve" onclick="approveUser('${user.id}')" ${approvalStatus === 'approved' ? 'disabled' : ''}>Approve</button>
-                            <button class="btn btn-reject" onclick="rejectUser('${user.id}')" ${approvalStatus === 'rejected' ? 'disabled' : ''}>Reject</button>
-                            <button class="btn btn-view" onclick="viewUser('${user.id}')">View</button>
+                            <button class="btn btn-view" onclick="viewStudent('${profile.user_id}', '${profile.display_name || 'Unknown'}')">View Details</button>
                         </td>
                     `;
                     
                     tableBody.appendChild(tr);
                 });
+                
+                // Update stats
+                document.getElementById('totalCount').textContent = profiles.length;
+                document.getElementById('activeCount').textContent = activeStudents;
+                document.getElementById('avgProgress').textContent = Math.round(totalProgress / profiles.length) + '%';
             }
-            
-            // Update stats
-            updateStats(users);
             
             // Show table, hide loading
             loadingIndicator.style.display = 'none';
-            usersTable.style.display = 'table';
+            studentsTable.style.display = 'table';
         }
         
-        function updateStats(users) {
-            let pendingCount = 0;
-            let approvedCount = 0;
+        function calculateProgress(userProgress) {
+            if (!userProgress || userProgress.length === 0) return 0;
             
-            if (users && users.length > 0) {
-                users.forEach(user => {
-                    const appMetadata = user.app_metadata || {};
-                    const approvalStatus = appMetadata.approval_status || 'pending';
-                    
-                    if (approvalStatus === 'pending') pendingCount++;
-                    if (approvalStatus === 'approved') approvedCount++;
-                });
-            }
-            
-            document.getElementById('pendingCount').textContent = pendingCount;
-            document.getElementById('approvedCount').textContent = approvedCount;
-            document.getElementById('totalCount').textContent = users ? users.length : 0;
+            // Calculate average progress across all lessons
+            const total = userProgress.reduce((sum, progress) => sum + progress.progress_percentage, 0);
+            return Math.round(total / userProgress.length);
         }
         
-        function filterUsers(statusFilter = null) {
+        function getLastSubmission(submissions) {
+            if (!submissions || submissions.length === 0) return null;
+            
+            // Find the most recent submission
+            return submissions.reduce((latest, submission) => {
+                return new Date(submission.created_at) > new Date(latest.created_at) ? submission : latest;
+            });
+        }
+        
+        function isStudentActive(lastSubmission) {
+            if (!lastSubmission) return false;
+            
+            // Check if student has been active in the last 7 days
+            const lastActivityDate = new Date(lastSubmission.created_at);
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            
+            return lastActivityDate >= sevenDaysAgo;
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'Unknown';
+            
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+        
+        function filterStudents(statusFilter = null) {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const rows = document.getElementById('usersTableBody').querySelectorAll('tr');
+            const rows = document.getElementById('studentsTableBody').querySelectorAll('tr');
             const activeFilter = statusFilter || document.querySelector('.filter-btn.active').getAttribute('data-filter');
             
             rows.forEach(row => {
                 const name = row.cells[0].textContent.toLowerCase();
-                const email = row.cells[1].textContent.toLowerCase();
+                const email = row.cells[0].querySelector('div').textContent.toLowerCase();
                 const status = row.cells[4].querySelector('.status').classList[1];
                 
                 const matchesSearch = name.includes(searchTerm) || email.includes(searchTerm);
-                const matchesFilter = activeFilter === 'all' || status === activeFilter;
+                const matchesFilter = activeFilter === 'all' || 
+                                    (activeFilter === 'active' && status === 'active') ||
+                                    (activeFilter === 'inactive' && status === 'inactive');
                 
                 if (matchesSearch && matchesFilter) {
                     row.style.display = '';
@@ -689,59 +651,97 @@
             });
         }
         
-        async function approveUser(userId) {
-            if (!supabase) {
-                showError('Not connected to Supabase');
-                return;
-            }
-            
+        async function viewStudent(userId, studentName) {
             try {
-                // Update user's app_metadata with approval status
-                const { data, error } = await supabase.auth.admin.updateUserById(
-                    userId,
-                    { app_metadata: { approval_status: 'approved' } }
-                );
+                // Fetch detailed progress data for this student
+                const { data: progressData, error: progressError } = await supabase
+                    .from('user_progress')
+                    .select(`
+                        *,
+                        lessons (*)
+                    `)
+                    .eq('user_id', userId);
                 
-                if (error) throw error;
+                if (progressError) {
+                    throw progressError;
+                }
                 
-                showSuccess('User approved successfully');
+                // Fetch submissions for this student
+                const { data: submissions, error: submissionsError } = await supabase
+                    .from('submissions')
+                    .select(`
+                        *,
+                        exercises (*)
+                    `)
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: false });
                 
-                // Reload users to reflect changes
-                loadUsers();
+                if (submissionsError) {
+                    throw submissionsError;
+                }
+                
+                // Calculate total time spent (simulated - in a real app you'd track this properly)
+                const timeSpent = calculateTimeSpent(submissions);
+                
+                // Display student details in modal
+                document.getElementById('modalBody').innerHTML = `
+                    <h3>${studentName}'s Progress</h3>
+                    <div class="time-spent" style="margin-bottom: 20px;">
+                        <i class="fas fa-clock"></i> Estimated total time spent: ${timeSpent}
+                    </div>
+                    
+                    <h4>Lesson Progress</h4>
+                    <div class="progress-grid">
+                        ${progressData.map(progress => `
+                            <div class="progress-card">
+                                <h4>${progress.lessons.title}</h4>
+                                <div>Progress: ${progress.progress_percentage}%</div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${progress.progress_percentage}%"></div>
+                                </div>
+                                <div class="time-spent">
+                                    ${progress.completed_at ? `Completed: ${formatDate(progress.completed_at)}` : 'In progress'}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <h4 style="margin-top: 20px;">Recent Activity</h4>
+                    <div style="max-height: 200px; overflow-y: auto;">
+                        ${submissions.slice(0, 5).map(submission => `
+                            <div style="padding: 10px; border-bottom: 1px solid #eee;">
+                                <div><strong>${submission.exercises.question}</strong></div>
+                                <div style="font-size: 14px; color: #6c757d;">
+                                    Submitted: ${formatDate(submission.created_at)}
+                                    ${submission.score ? ` | Score: ${submission.score}/100` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                // Show modal
+                document.getElementById('studentModal').style.display = 'flex';
                 
             } catch (error) {
-                showError(`Error approving user: ${error.message}`);
+                showError(`Error loading student details: ${error.message}`);
             }
         }
         
-        async function rejectUser(userId) {
-            if (!supabase) {
-                showError('Not connected to Supabase');
-                return;
-            }
+        function calculateTimeSpent(submissions) {
+            if (!submissions || submissions.length === 0) return 'No data';
             
-            try {
-                // Update user's app_metadata with rejection status
-                const { data, error } = await supabase.auth.admin.updateUserById(
-                    userId,
-                    { app_metadata: { approval_status: 'rejected' } }
-                );
-                
-                if (error) throw error;
-                
-                showSuccess('User rejected successfully');
-                
-                // Reload users to reflect changes
-                loadUsers();
-                
-            } catch (error) {
-                showError(`Error rejecting user: ${error.message}`);
+            // Simulate time spent based on number of submissions
+            // In a real application, you would track actual time spent
+            const estimatedMinutes = submissions.length * 15;
+            
+            if (estimatedMinutes < 60) {
+                return `${estimatedMinutes} minutes`;
+            } else {
+                const hours = Math.floor(estimatedMinutes / 60);
+                const minutes = estimatedMinutes % 60;
+                return `${hours}h ${minutes}m`;
             }
-        }
-        
-        function viewUser(userId) {
-            alert(`View details for user: ${userId}\n\nThis would typically open a modal with user details.`);
-            // In a real implementation, you would show a modal with user details
         }
         
         function showError(message) {
@@ -768,7 +768,7 @@
         
         // Close modal when clicking outside
         window.addEventListener('click', (event) => {
-            const modal = document.getElementById('userModal');
+            const modal = document.getElementById('studentModal');
             if (event.target === modal) {
                 modal.style.display = 'none';
             }
