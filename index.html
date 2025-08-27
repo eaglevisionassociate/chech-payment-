@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Progress Dashboard</title>
+    <title>User Approval & Student Progress Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -21,7 +21,7 @@
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -44,6 +44,26 @@
         h1 {
             font-size: 28px;
             font-weight: 600;
+        }
+        
+        .dashboard-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .tab.active {
+            background: #6574cd;
+            color: white;
         }
         
         .stats {
@@ -125,6 +145,7 @@
             overflow: hidden;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
             min-height: 300px;
+            margin-bottom: 30px;
         }
         
         table {
@@ -148,6 +169,34 @@
             background-color: #f9f9f9;
         }
         
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status.approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.paused {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+        
         .progress-bar {
             height: 10px;
             background: #e9ecef;
@@ -160,24 +209,6 @@
             height: 100%;
             background: #28a745;
             border-radius: 5px;
-        }
-        
-        .status {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 500;
-        }
-        
-        .status.active {
-            background: #d4edda;
-            color: #155724;
-        }
-        
-        .status.inactive {
-            background: #f8d7da;
-            color: #721c24;
         }
         
         .actions {
@@ -194,6 +225,33 @@
             transition: all 0.2s;
         }
         
+        .btn-approve {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-approve:hover {
+            background: #218838;
+        }
+        
+        .btn-reject {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-reject:hover {
+            background: #c82333;
+        }
+        
+        .btn-pause {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-pause:hover {
+            background: #5a6268;
+        }
+        
         .btn-view {
             background: #17a2b8;
             color: white;
@@ -201,6 +259,15 @@
         
         .btn-view:hover {
             background: #138496;
+        }
+        
+        .btn-progress {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-progress:hover {
+            background: #e0a800;
         }
         
         .loading {
@@ -219,6 +286,7 @@
             width: 40px;
             height: 40px;
             animation: spin 1s linear infinite;
+            display: inline-block;
         }
         
         @keyframes spin {
@@ -279,24 +347,6 @@
             cursor: pointer;
         }
         
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-        
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-        }
-        
         .progress-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -319,6 +369,86 @@
             font-size: 14px;
             color: #6c757d;
             margin-top: 5px;
+        }
+        
+        .progress-section {
+            display: none;
+        }
+        
+        .progress-section.active {
+            display: block;
+        }
+        
+        /* New styles for user selector */
+        .user-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .user-selector select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            flex: 1;
+        }
+        
+        .user-selector button {
+            padding: 10px 20px;
+            background: #6574cd;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .user-selector button:hover {
+            background: #5563b8;
+        }
+        
+        .progress-details {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .progress-details h3 {
+            margin-bottom: 15px;
+            color: #3a7bd5;
+        }
+        
+        .progress-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .summary-card h4 {
+            margin-bottom: 10px;
+            color: #555;
+        }
+        
+        .summary-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #6574cd;
         }
         
         @media (max-width: 768px) {
@@ -351,6 +481,15 @@
             .progress-grid {
                 grid-template-columns: 1fr;
             }
+            
+            .user-selector {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .progress-summary {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -358,20 +497,30 @@
     <div class="container">
         <header>
             <div class="header-content">
-                <h1><i class="fas fa-user-graduate"></i> Student Progress Dashboard</h1>
+                <h1><i class="fas fa-user-check"></i> User Approval & Student Progress Dashboard</h1>
                 <div class="user-info">
-                    <p>Welcome, Educator</p>
+                    <p>Welcome, Admin</p>
                 </div>
+            </div>
+            
+            <div class="dashboard-tabs">
+                <div class="tab active" data-tab="approval">User Approval</div>
+                <div class="tab" data-tab="progress">Student Progress</div>
+                <div class="tab" data-tab="individual">Individual Progress</div>
             </div>
             
             <div class="stats">
                 <div class="stat-card">
-                    <p>Total Students</p>
-                    <div class="stat-number" id="totalCount">0</div>
+                    <p>Pending Approval</p>
+                    <div class="stat-number" id="pendingCount">0</div>
                 </div>
                 <div class="stat-card">
-                    <p>Active Students</p>
-                    <div class="stat-number" id="activeCount">0</div>
+                    <p>Approved Users</p>
+                    <div class="stat-number" id="approvedCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <p>Total Students</p>
+                    <div class="stat-number" id="totalCount">0</div>
                 </div>
                 <div class="stat-card">
                     <p>Avg. Progress</p>
@@ -383,58 +532,155 @@
         <div class="error" id="errorMessage"></div>
         <div class="success" id="successMessage"></div>
         
-        <div class="controls">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Search students...">
+        <!-- User Approval Section -->
+        <div class="progress-section active" id="approvalSection">
+            <div class="controls">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search users...">
+                </div>
+                
+                <div class="filters">
+                    <div class="filter-btn active" data-filter="all">
+                        <i class="fas fa-users"></i> All
+                    </div>
+                    <div class="filter-btn" data-filter="pending">
+                        <i class="fas fa-clock"></i> Pending
+                    </div>
+                    <div class="filter-btn" data-filter="approved">
+                        <i class="fas fa-check-circle"></i> Approved
+                    </div>
+                    <div class="filter-btn" data-filter="paused">
+                        <i class="fas fa-pause-circle"></i> Paused
+                    </div>
+                </div>
             </div>
             
-            <div class="filters">
-                <div class="filter-btn active" data-filter="all">
-                    <i class="fas fa-users"></i> All
+            <div class="user-table">
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <p>Loading users...</p>
                 </div>
-                <div class="filter-btn" data-filter="active">
-                    <i class="fas fa-user-check"></i> Active
-                </div>
-                <div class="filter-btn" data-filter="inactive">
-                    <i class="fas fa-user-clock"></i> Inactive
-                </div>
+                
+                <table style="display: none;" id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Signup Date</th>
+                            <th>Account Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Users will be populated here -->
+                    </tbody>
+                </table>
             </div>
         </div>
         
-        <div class="user-table">
-            <div class="loading" id="loadingIndicator">
-                <div class="spinner"></div>
-                <p>Loading student data...</p>
+        <!-- Student Progress Section -->
+        <div class="progress-section" id="progressSection">
+            <div class="controls">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="progressSearchInput" placeholder="Search students...">
+                </div>
+                
+                <div class="filters">
+                    <div class="filter-btn active" data-progress-filter="all">
+                        <i class="fas fa-users"></i> All
+                    </div>
+                    <div class="filter-btn" data-progress-filter="active">
+                        <i class="fas fa-user-check"></i> Active
+                    </div>
+                    <div class="filter-btn" data-progress-filter="inactive">
+                        <i class="fas fa-user-clock"></i> Inactive
+                    </div>
+                </div>
             </div>
             
-            <table style="display: none;" id="studentsTable">
-                <thead>
-                    <tr>
-                        <th>Student</th>
-                        <th>Grade</th>
-                        <th>Progress</th>
-                        <th>Last Activity</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="studentsTableBody">
-                    <!-- Students will be populated here -->
-                </tbody>
-            </table>
+            <div class="user-table">
+                <div class="loading" id="progressLoadingIndicator">
+                    <div class="spinner"></div>
+                    <p>Loading student data...</p>
+                </div>
+                
+                <table style="display: none;" id="studentsTable">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Grade</th>
+                            <th>Progress</th>
+                            <th>Last Activity</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentsTableBody">
+                        <!-- Students will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Individual Progress Section -->
+        <div class="progress-section" id="individualSection">
+            <div class="user-selector">
+                <label for="userSelect"><strong>Select User:</strong></label>
+                <select id="userSelect">
+                    <option value="">-- Select a user --</option>
+                </select>
+                <button id="loadUserProgressBtn">View Progress</button>
+            </div>
+            
+            <div class="progress-details" id="userProgressDetails" style="display: none;">
+                <h3 id="selectedUserName">User Progress Details</h3>
+                
+                <div class="progress-summary" id="progressSummary">
+                    <!-- Summary cards will be populated here -->
+                </div>
+                
+                <h4>Lesson Progress</h4>
+                <div class="progress-grid" id="lessonProgressGrid">
+                    <!-- Lesson progress cards will be populated here -->
+                </div>
+                
+                <h4 style="margin-top: 20px;">Recent Activity</h4>
+                <div id="recentActivity" style="max-height: 200px; overflow-y: auto;">
+                    <!-- Recent activity will be populated here -->
+                </div>
+            </div>
+            
+            <div class="loading" id="individualLoadingIndicator" style="display: none;">
+                <div class="spinner"></div>
+                <p>Loading user progress...</p>
+            </div>
         </div>
     </div>
 
-    <!-- Student Detail Modal -->
-    <div class="modal" id="studentModal">
+    <!-- User Detail Modal -->
+    <div class="modal" id="userModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Student Progress Details</h2>
+                <h2>User Details</h2>
                 <span class="close" id="closeModal">&times;</span>
             </div>
             <div id="modalBody">
-                <!-- Student details will be populated here -->
+                <!-- User details will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Progress Modal -->
+    <div class="modal" id="progressModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Student Progress Details</h2>
+                <span class="close" id="closeProgressModal">&times;</span>
+            </div>
+            <div id="progressModalBody">
+                <!-- Student progress details will be populated here -->
             </div>
         </div>
     </div>
@@ -447,63 +693,222 @@
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
         
         document.addEventListener('DOMContentLoaded', function() {
-            // Load students on page load
-            loadStudents();
+            // Load users on page load
+            loadUsers();
             
             // Set up event listeners
-            document.getElementById('searchInput').addEventListener('input', filterStudents);
+            document.getElementById('searchInput').addEventListener('input', filterUsers);
+            document.getElementById('progressSearchInput').addEventListener('input', filterStudents);
             
             const filterButtons = document.querySelectorAll('.filter-btn');
             filterButtons.forEach(button => {
                 button.addEventListener('click', () => {
-                    filterButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                    const filter = button.getAttribute('data-filter');
-                    filterStudents(filter);
+                    if (button.parentElement.classList.contains('filters')) {
+                        const parentFilters = button.closest('.filters');
+                        parentFilters.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        
+                        if (parentFilters.id === 'progressFilters') {
+                            const filter = button.getAttribute('data-progress-filter');
+                            filterStudents(filter);
+                        } else {
+                            const filter = button.getAttribute('data-filter');
+                            filterUsers(filter);
+                        }
+                    }
+                });
+            });
+            
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    document.querySelectorAll('.progress-section').forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    
+                    const tabName = tab.getAttribute('data-tab');
+                    document.getElementById(tabName + 'Section').classList.add('active');
+                    
+                    if (tabName === 'progress') {
+                        loadStudents();
+                    } else if (tabName === 'individual') {
+                        populateUserDropdown();
+                    }
                 });
             });
             
             document.getElementById('closeModal').addEventListener('click', () => {
-                document.getElementById('studentModal').style.display = 'none';
+                document.getElementById('userModal').style.display = 'none';
+            });
+            
+            document.getElementById('closeProgressModal').addEventListener('click', () => {
+                document.getElementById('progressModal').style.display = 'none';
+            });
+            
+            // Load individual user progress when button is clicked
+            document.getElementById('loadUserProgressBtn').addEventListener('click', () => {
+                const userId = document.getElementById('userSelect').value;
+                if (userId) {
+                    loadIndividualUserProgress(userId);
+                } else {
+                    showError('Please select a user first');
+                }
             });
         });
         
-        async function loadStudents() {
+        async function loadUsers() {
             try {
                 document.getElementById('loadingIndicator').style.display = 'flex';
                 
-                // Fetch profiles with user data
-                const { data: profiles, error } = await supabase
-                    .from('profiles')
-                    .select(`
-                        *,
-                        auth_users:user_id (
-                            email,
-                            last_sign_in_at
-                        )
-                    `)
-                    .order('created_at', { ascending: false });
+                // Fetch users from auth.users table
+                const { data: { users }, error } = await supabase.auth.admin.listUsers();
                 
                 if (error) {
                     throw error;
                 }
                 
-                // Fetch progress data for all users
-                const { data: progressData, error: progressError } = await supabase
-                    .from('user_progress')
-                    .select('*');
+                // Display users
+                displayUsers(users);
                 
-                if (progressError) {
-                    throw progressError;
+            } catch (error) {
+                showError(`Error loading users: ${error.message}`);
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+        }
+        
+        function displayUsers(users) {
+            const tableBody = document.getElementById('usersTableBody');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const usersTable = document.getElementById('usersTable');
+            
+            // Clear previous data
+            tableBody.innerHTML = '';
+            
+            if (users.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 30px;">
+                            <i class="fas fa-users" style="font-size: 48px; color: #ddd; margin-bottom: 15px;"></i>
+                            <p>No users found</p>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                let pendingCount = 0;
+                let approvedCount = 0;
+                
+                // Add users to table
+                users.forEach(user => {
+                    const signupDate = new Date(user.created_at).toLocaleDateString();
+                    
+                    // Check if user has custom app_metadata for approval status
+                    const appMetadata = user.app_metadata || {};
+                    const approvalStatus = appMetadata.approval_status || 'pending';
+                    
+                    if (approvalStatus === 'pending') pendingCount++;
+                    if (approvalStatus === 'approved') approvedCount++;
+                    
+                    const tr = document.createElement('tr');
+                    
+                    tr.innerHTML = `
+                        <td>${user.user_metadata?.full_name || user.email || 'Unknown'}</td>
+                        <td>${user.email}</td>
+                        <td>${signupDate}</td>
+                        <td><span class="status ${approvalStatus}">${approvalStatus.charAt(0).toUpperCase() + approvalStatus.slice(1)}</span></td>
+                        <td class="actions">
+                            <button class="btn btn-approve" onclick="approveUser('${user.id}')" ${approvalStatus === 'approved' ? 'disabled' : ''}>Approve</button>
+                            <button class="btn btn-pause" onclick="pauseUser('${user.id}')" ${approvalStatus === 'paused' ? 'disabled' : ''}>Pause</button>
+                            <button class="btn btn-reject" onclick="rejectUser('${user.id}')" ${approvalStatus === 'rejected' ? 'disabled' : ''}>Reject</button>
+                            <button class="btn btn-progress" onclick="viewStudentProgress('${user.id}', '${user.user_metadata?.full_name || user.email || 'Unknown'}')">Progress</button>
+                        </td>
+                    `;
+                    
+                    tableBody.appendChild(tr);
+                });
+                
+                // Update stats
+                document.getElementById('pendingCount').textContent = pendingCount;
+                document.getElementById('approvedCount').textContent = approvedCount;
+            }
+            
+            // Show table, hide loading
+            loadingIndicator.style.display = 'none';
+            usersTable.style.display = 'table';
+        }
+        
+        async function loadStudents() {
+            try {
+                document.getElementById('progressLoadingIndicator').style.display = 'flex';
+                
+                // First try to fetch from the profiles table
+                let profiles = [];
+                let profilesError = null;
+                
+                try {
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    
+                    if (error) {
+                        profilesError = error;
+                    } else {
+                        profiles = data;
+                    }
+                } catch (error) {
+                    profilesError = error;
+                    console.warn('Could not load profiles:', error.message);
                 }
                 
-                // Fetch submissions to calculate time spent
-                const { data: submissions, error: submissionsError } = await supabase
-                    .from('submissions')
-                    .select('*');
+                // If profiles table doesn't exist or is empty, use auth users instead
+                if (profiles.length === 0 || profilesError) {
+                    const { data: { users }, error } = await supabase.auth.admin.listUsers();
+                    
+                    if (error) {
+                        throw error;
+                    }
+                    
+                    // Convert auth users to profile format
+                    profiles = users.map(user => ({
+                        id: user.id,
+                        user_id: user.id,
+                        display_name: user.user_metadata?.full_name || user.email,
+                        grade: 8, // Default grade
+                        created_at: user.created_at,
+                        email: user.email,
+                        last_sign_in_at: user.last_sign_in_at
+                    }));
+                }
                 
-                if (submissionsError) {
-                    throw submissionsError;
+                // Try to fetch progress data
+                let progressData = [];
+                try {
+                    const { data, error } = await supabase
+                        .from('user_progress')
+                        .select('*');
+                    
+                    if (!error) {
+                        progressData = data;
+                    }
+                } catch (error) {
+                    console.warn('Could not load progress data:', error.message);
+                }
+                
+                // Try to fetch submissions
+                let submissions = [];
+                try {
+                    const { data, error } = await supabase
+                        .from('submissions')
+                        .select('*');
+                    
+                    if (!error) {
+                        submissions = data;
+                    }
+                } catch (error) {
+                    console.warn('Could not load submissions:', error.message);
                 }
                 
                 // Display students with their progress data
@@ -511,13 +916,13 @@
                 
             } catch (error) {
                 showError(`Error loading student data: ${error.message}`);
-                document.getElementById('loadingIndicator').style.display = 'none';
+                document.getElementById('progressLoadingIndicator').style.display = 'none';
             }
         }
         
         function displayStudents(profiles, progressData, submissions) {
             const tableBody = document.getElementById('studentsTableBody');
-            const loadingIndicator = document.getElementById('loadingIndicator');
+            const loadingIndicator = document.getElementById('progressLoadingIndicator');
             const studentsTable = document.getElementById('studentsTable');
             
             // Clear previous data
@@ -545,25 +950,20 @@
                     const progressPercentage = calculateProgress(userProgress);
                     totalProgress += progressPercentage;
                     
-                    // Determine if student is active (submission in last 7 days)
-                    const lastSubmission = getLastSubmission(userSubmissions);
-                    const isActive = isStudentActive(lastSubmission);
+                    // Determine if student is active (based on last sign in)
+                    const lastLogin = profile.last_sign_in_at;
+                    const isActive = isStudentActive(lastLogin);
                     
                     if (isActive) activeStudents++;
                     
-                    const lastActivity = lastSubmission ? 
-                        formatDate(lastSubmission.created_at) : 'No activity';
-                    
-                    const signupDate = formatDate(profile.created_at);
-                    const lastLogin = profile.auth_users?.last_sign_in_at ? 
-                        formatDate(profile.auth_users.last_sign_in_at) : 'Never';
+                    const lastActivity = lastLogin ? formatDate(lastLogin) : 'No activity';
                     
                     const tr = document.createElement('tr');
                     
                     tr.innerHTML = `
                         <td>
                             <div><strong>${profile.display_name || 'Unknown'}</strong></div>
-                            <div style="font-size: 12px; color: #6c757d;">${profile.auth_users?.email || 'No email'}</div>
+                            <div style="font-size: 12px; color: #6c757d;">${profile.email || 'No email'}</div>
                         </td>
                         <td>Grade ${profile.grade || 'N/A'}</td>
                         <td>
@@ -575,7 +975,7 @@
                         <td>${lastActivity}</td>
                         <td><span class="status ${isActive ? 'active' : 'inactive'}">${isActive ? 'Active' : 'Inactive'}</span></td>
                         <td class="actions">
-                            <button class="btn btn-view" onclick="viewStudent('${profile.user_id}', '${profile.display_name || 'Unknown'}')">View Details</button>
+                            <button class="btn btn-view" onclick="viewStudentProgress('${profile.user_id || profile.id}', '${profile.display_name || 'Unknown'}')">View Details</button>
                         </td>
                     `;
                     
@@ -584,8 +984,7 @@
                 
                 // Update stats
                 document.getElementById('totalCount').textContent = profiles.length;
-                document.getElementById('activeCount').textContent = activeStudents;
-                document.getElementById('avgProgress').textContent = Math.round(totalProgress / profiles.length) + '%';
+                document.getElementById('avgProgress').textContent = profiles.length > 0 ? Math.round(totalProgress / profiles.length) + '%' : '0%';
             }
             
             // Show table, hide loading
@@ -593,32 +992,218 @@
             studentsTable.style.display = 'table';
         }
         
+        async function populateUserDropdown() {
+            try {
+                const userSelect = document.getElementById('userSelect');
+                
+                // Clear existing options except the first one
+                while (userSelect.options.length > 1) {
+                    userSelect.remove(1);
+                }
+                
+                // Fetch users from auth.users table
+                const { data: { users }, error } = await supabase.auth.admin.listUsers();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Add users to dropdown
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.user_metadata?.full_name || user.email || 'Unknown'} (${user.email})`;
+                    userSelect.appendChild(option);
+                });
+                
+            } catch (error) {
+                showError(`Error loading users: ${error.message}`);
+            }
+        }
+        
+        async function loadIndividualUserProgress(userId) {
+            try {
+                document.getElementById('individualLoadingIndicator').style.display = 'flex';
+                document.getElementById('userProgressDetails').style.display = 'none';
+                
+                // Fetch user details
+                const { data: { user }, userError } = await supabase.auth.admin.getUserById(userId);
+                
+                if (userError) {
+                    throw userError;
+                }
+                
+                // Try to fetch progress data for this user
+                let progressData = [];
+                try {
+                    const { data, error } = await supabase
+                        .from('user_progress')
+                        .select('*')
+                        .eq('user_id', userId);
+                    
+                    if (!error) {
+                        progressData = data;
+                    }
+                } catch (error) {
+                    console.warn('Could not load progress details:', error.message);
+                }
+                
+                // Try to fetch submissions for this user
+                let submissions = [];
+                try {
+                    const { data, error } = await supabase
+                        .from('submissions')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .order('created_at', { ascending: false });
+                    
+                    if (!error) {
+                        submissions = data;
+                    }
+                } catch (error) {
+                    console.warn('Could not load submissions:', error.message);
+                }
+                
+                // Try to fetch lessons data
+                let lessons = [];
+                try {
+                    const { data, error } = await supabase
+                        .from('lessons')
+                        .select('*');
+                    
+                    if (!error) {
+                        lessons = data;
+                    }
+                } catch (error) {
+                    console.warn('Could not load lessons:', error.message);
+                }
+                
+                // Try to fetch exercises data
+                let exercises = [];
+                try {
+                    const { data, error } = await supabase
+                        .from('exercises')
+                        .select('*');
+                    
+                    if (!error) {
+                        exercises = data;
+                    }
+                } catch (error) {
+                    console.warn('Could not load exercises:', error.message);
+                }
+                
+                // Display user progress details
+                displayIndividualUserProgress(user, progressData, submissions, lessons, exercises);
+                
+            } catch (error) {
+                showError(`Error loading user progress: ${error.message}`);
+                document.getElementById('individualLoadingIndicator').style.display = 'none';
+            }
+        }
+        
+        function displayIndividualUserProgress(user, progressData, submissions, lessons, exercises) {
+            const userName = user.user_metadata?.full_name || user.email || 'Unknown';
+            const userEmail = user.email || 'No email';
+            
+            // Update user name
+            document.getElementById('selectedUserName').textContent = `${userName}'s Progress Details`;
+            
+            // Calculate statistics
+            const progressPercentage = calculateProgress(progressData);
+            const completedLessons = progressData.filter(p => p.progress_percentage === 100).length;
+            const totalLessons = lessons.length || progressData.length;
+            const totalSubmissions = submissions.length;
+            const avgScore = submissions.length > 0 ? 
+                Math.round(submissions.reduce((sum, s) => sum + (s.score || 0), 0) / submissions.length) : 0;
+            
+            // Display summary cards
+            const progressSummary = document.getElementById('progressSummary');
+            progressSummary.innerHTML = `
+                <div class="summary-card">
+                    <h4>Overall Progress</h4>
+                    <div class="value">${progressPercentage}%</div>
+                </div>
+                <div class="summary-card">
+                    <h4>Completed Lessons</h4>
+                    <div class="value">${completedLessons}/${totalLessons}</div>
+                </div>
+                <div class="summary-card">
+                    <h4>Total Submissions</h4>
+                    <div class="value">${totalSubmissions}</div>
+                </div>
+                <div class="summary-card">
+                    <h4>Average Score</h4>
+                    <div class="value">${avgScore}/100</div>
+                </div>
+            `;
+            
+            // Display lesson progress
+            const lessonProgressGrid = document.getElementById('lessonProgressGrid');
+            if (progressData && progressData.length > 0) {
+                lessonProgressGrid.innerHTML = progressData.map(progress => {
+                    const lesson = lessons.find(l => l.id === progress.lesson_id) || {};
+                    const lessonName = lesson.title || `Lesson ${progress.lesson_id || 'Unknown'}`;
+                    
+                    return `
+                        <div class="progress-card">
+                            <h4>${lessonName}</h4>
+                            <div>Progress: ${progress.progress_percentage || 0}%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${progress.progress_percentage || 0}%"></div>
+                            </div>
+                            <div class="time-spent">
+                                ${progress.completed_at ? `Completed: ${formatDate(progress.completed_at)}` : 'In progress'}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                lessonProgressGrid.innerHTML = '<p>No progress data available for this user</p>';
+            }
+            
+            // Display recent activity
+            const recentActivity = document.getElementById('recentActivity');
+            if (submissions && submissions.length > 0) {
+                recentActivity.innerHTML = submissions.slice(0, 10).map(submission => {
+                    const exercise = exercises.find(e => e.id === submission.exercise_id) || {};
+                    const exerciseName = exercise.title || `Exercise ${submission.exercise_id || 'Unknown'}`;
+                    
+                    return `
+                        <div style="padding: 10px; border-bottom: 1px solid #eee;">
+                            <div><strong>${exerciseName}</strong></div>
+                            <div style="font-size: 14px; color: #6c757d;">
+                                Submitted: ${formatDate(submission.created_at)}
+                                ${submission.score ? ` | Score: ${submission.score}/100` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                recentActivity.innerHTML = '<p>No recent activity</p>';
+            }
+            
+            // Show details, hide loading
+            document.getElementById('individualLoadingIndicator').style.display = 'none';
+            document.getElementById('userProgressDetails').style.display = 'block';
+        }
+        
         function calculateProgress(userProgress) {
             if (!userProgress || userProgress.length === 0) return 0;
             
             // Calculate average progress across all lessons
-            const total = userProgress.reduce((sum, progress) => sum + progress.progress_percentage, 0);
+            const total = userProgress.reduce((sum, progress) => sum + (progress.progress_percentage || 0), 0);
             return Math.round(total / userProgress.length);
         }
         
-        function getLastSubmission(submissions) {
-            if (!submissions || submissions.length === 0) return null;
-            
-            // Find the most recent submission
-            return submissions.reduce((latest, submission) => {
-                return new Date(submission.created_at) > new Date(latest.created_at) ? submission : latest;
-            });
-        }
-        
-        function isStudentActive(lastSubmission) {
-            if (!lastSubmission) return false;
+        function isStudentActive(lastLogin) {
+            if (!lastLogin) return false;
             
             // Check if student has been active in the last 7 days
-            const lastActivityDate = new Date(lastSubmission.created_at);
+            const activityDate = new Date(lastLogin);
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             
-            return lastActivityDate >= sevenDaysAgo;
+            return activityDate >= sevenDaysAgo;
         }
         
         function formatDate(dateString) {
@@ -628,10 +1213,31 @@
             return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }
         
-        function filterStudents(statusFilter = null) {
+        function filterUsers(statusFilter = null) {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.getElementById('usersTableBody').querySelectorAll('tr');
+            const activeFilter = statusFilter || document.querySelector('.filters:not(#progressFilters) .filter-btn.active').getAttribute('data-filter');
+            
+            rows.forEach(row => {
+                const name = row.cells[0].textContent.toLowerCase();
+                const email = row.cells[1].textContent.toLowerCase();
+                const accountStatus = row.cells[3].querySelector('.status').classList[1];
+                
+                const matchesSearch = name.includes(searchTerm) || email.includes(searchTerm);
+                const matchesFilter = activeFilter === 'all' || accountStatus === activeFilter;
+                
+                if (matchesSearch && matchesFilter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        function filterStudents(statusFilter = null) {
+            const searchTerm = document.getElementById('progressSearchInput').value.toLowerCase();
             const rows = document.getElementById('studentsTableBody').querySelectorAll('tr');
-            const activeFilter = statusFilter || document.querySelector('.filter-btn.active').getAttribute('data-filter');
+            const activeFilter = statusFilter || document.querySelector('#progressFilters .filter-btn.active').getAttribute('data-progress-filter');
             
             rows.forEach(row => {
                 const name = row.cells[0].textContent.toLowerCase();
@@ -651,40 +1257,104 @@
             });
         }
         
-        async function viewStudent(userId, studentName) {
+        async function approveUser(userId) {
             try {
-                // Fetch detailed progress data for this student
-                const { data: progressData, error: progressError } = await supabase
-                    .from('user_progress')
-                    .select(`
-                        *,
-                        lessons (*)
-                    `)
-                    .eq('user_id', userId);
+                // Update user's app_metadata with approval status
+                const { data, error } = await supabase.auth.admin.updateUserById(
+                    userId,
+                    { app_metadata: { approval_status: 'approved' } }
+                );
                 
-                if (progressError) {
-                    throw progressError;
+                if (error) throw error;
+                
+                showSuccess('User approved successfully');
+                
+                // Reload users to reflect changes
+                loadUsers();
+                
+            } catch (error) {
+                showError(`Error approving user: ${error.message}`);
+            }
+        }
+        
+        async function pauseUser(userId) {
+            try {
+                // Update user's app_metadata with paused status
+                const { data, error } = await supabase.auth.admin.updateUserById(
+                    userId,
+                    { app_metadata: { approval_status: 'paused' } }
+                );
+                
+                if (error) throw error;
+                
+                showSuccess('User paused successfully');
+                
+                // Reload users to reflect changes
+                loadUsers();
+                
+            } catch (error) {
+                showError(`Error pausing user: ${error.message}`);
+            }
+        }
+        
+        async function rejectUser(userId) {
+            try {
+                // Update user's app_metadata with rejected status
+                const { data, error } = await supabase.auth.admin.updateUserById(
+                    userId,
+                    { app_metadata: { approval_status: 'rejected' } }
+                );
+                
+                if (error) throw error;
+                
+                showSuccess('User rejected successfully');
+                
+                // Reload users to reflect changes
+                loadUsers();
+                
+            } catch (error) {
+                showError(`Error rejecting user: ${error.message}`);
+            }
+        }
+        
+        async function viewStudentProgress(userId, studentName) {
+            try {
+                // Try to fetch progress data for this student
+                let progressData = [];
+                try {
+                    const { data, error } = await supabase
+                        .from('user_progress')
+                        .select('*')
+                        .eq('user_id', userId);
+                    
+                    if (!error) {
+                        progressData = data;
+                    }
+                } catch (error) {
+                    console.warn('Could not load progress details:', error.message);
                 }
                 
-                // Fetch submissions for this student
-                const { data: submissions, error: submissionsError } = await supabase
-                    .from('submissions')
-                    .select(`
-                        *,
-                        exercises (*)
-                    `)
-                    .eq('user_id', userId)
-                    .order('created_at', { ascending: false });
-                
-                if (submissionsError) {
-                    throw submissionsError;
+                // Try to fetch submissions for this student
+                let submissions = [];
+                try {
+                    const { data, error } = await supabase
+                        .from('submissions')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .order('created_at', { ascending: false });
+                    
+                    if (!error) {
+                        submissions = data;
+                    }
+                } catch (error) {
+                    console.warn('Could not load submissions:', error.message);
                 }
                 
-                // Calculate total time spent (simulated - in a real app you'd track this properly)
+                // Calculate total time spent (simulated)
                 const timeSpent = calculateTimeSpent(submissions);
                 
                 // Display student details in modal
-                document.getElementById('modalBody').innerHTML = `
+                document.getElementById('progressModalBody').innerHTML = `
                     <h3>${studentName}'s Progress</h3>
                     <div class="time-spent" style="margin-bottom: 20px;">
                         <i class="fas fa-clock"></i> Estimated total time spent: ${timeSpent}
@@ -692,36 +1362,36 @@
                     
                     <h4>Lesson Progress</h4>
                     <div class="progress-grid">
-                        ${progressData.map(progress => `
+                        ${progressData && progressData.length > 0 ? progressData.map(progress => `
                             <div class="progress-card">
-                                <h4>${progress.lessons.title}</h4>
-                                <div>Progress: ${progress.progress_percentage}%</div>
+                                <h4>Lesson ${progress.lesson_id || 'Unknown'}</h4>
+                                <div>Progress: ${progress.progress_percentage || 0}%</div>
                                 <div class="progress-bar">
-                                    <div class="progress-fill" style="width: ${progress.progress_percentage}%"></div>
+                                    <div class="progress-fill" style="width: ${progress.progress_percentage || 0}%"></div>
                                 </div>
                                 <div class="time-spent">
                                     ${progress.completed_at ? `Completed: ${formatDate(progress.completed_at)}` : 'In progress'}
                                 </div>
                             </div>
-                        `).join('')}
+                        `).join('') : '<p>No progress data available</p>'}
                     </div>
                     
                     <h4 style="margin-top: 20px;">Recent Activity</h4>
                     <div style="max-height: 200px; overflow-y: auto;">
-                        ${submissions.slice(0, 5).map(submission => `
+                        ${submissions && submissions.length > 0 ? submissions.slice(0, 5).map(submission => `
                             <div style="padding: 10px; border-bottom: 1px solid #eee;">
-                                <div><strong>${submission.exercises.question}</strong></div>
+                                <div><strong>Submission for exercise ${submission.exercise_id || 'Unknown'}</strong></div>
                                 <div style="font-size: 14px; color: #6c757d;">
                                     Submitted: ${formatDate(submission.created_at)}
                                     ${submission.score ? ` | Score: ${submission.score}/100` : ''}
                                 </div>
                             </div>
-                        `).join('')}
+                        `).join('') : '<p>No recent activity</p>'}
                     </div>
                 `;
                 
                 // Show modal
-                document.getElementById('studentModal').style.display = 'flex';
+                document.getElementById('progressModal').style.display = 'flex';
                 
             } catch (error) {
                 showError(`Error loading student details: ${error.message}`);
@@ -732,7 +1402,6 @@
             if (!submissions || submissions.length === 0) return 'No data';
             
             // Simulate time spent based on number of submissions
-            // In a real application, you would track actual time spent
             const estimatedMinutes = submissions.length * 15;
             
             if (estimatedMinutes < 60) {
@@ -768,9 +1437,14 @@
         
         // Close modal when clicking outside
         window.addEventListener('click', (event) => {
-            const modal = document.getElementById('studentModal');
+            const modal = document.getElementById('userModal');
             if (event.target === modal) {
                 modal.style.display = 'none';
+            }
+            
+            const progressModal = document.getElementById('progressModal');
+            if (event.target === progressModal) {
+                progressModal.style.display = 'none';
             }
         });
     </script>
